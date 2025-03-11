@@ -456,6 +456,7 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 		if response == nil {
 			return true
 		}
+
 		if requestMode == RequestModeCompletion {
 			responseText += claudeResponse.Completion
 			responseId = response.Id
@@ -471,20 +472,30 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 				usage.CompletionTokens = claudeUsage.OutputTokens
 				usage.TotalTokens = claudeUsage.InputTokens + claudeUsage.OutputTokens
 			} else if claudeResponse.Type == "content_block_start" {
-				return true
+				// Just pass through
 			} else {
-				return true
+				// Just pass through for other event types
 			}
 		}
-		//response.Id = responseId
-		response.Id = responseId
-		response.Created = createdTime
-		response.Model = info.UpstreamModelName
 
-		err = helper.ObjectData(c, response)
+		// Format the response as an SSE message
+		sseEvent := claudeResponse.Type
+		sseData, err := json.Marshal(claudeResponse)
+		if err != nil {
+			common.LogError(c, "error marshalling SSE data: "+err.Error())
+			return true
+		}
+
+		// Write the SSE message format
+		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, string(sseData))
+
+		// Send the formatted SSE message
+		_, err = c.Writer.Write([]byte(sseMessage))
 		if err != nil {
 			common.LogError(c, "send_stream_response_failed: "+err.Error())
 		}
+		c.Writer.Flush()
+
 		return true
 	})
 

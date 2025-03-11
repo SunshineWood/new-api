@@ -217,6 +217,8 @@ func getPromptTokens(textRequest *dto.GeneralOpenAIRequest, info *relaycommon.Re
 		promptTokens, err = service.CountTokenInput(textRequest.Input, textRequest.Model)
 	case relayconstant.RelayModeEmbeddings:
 		promptTokens, err = service.CountTokenInput(textRequest.Input, textRequest.Model)
+	case relayconstant.RelayModeMessages:
+		promptTokens, err = service.CountTokenInput(textRequest.Input, textRequest.Model)
 	default:
 		err = errors.New("unknown relay mode")
 		promptTokens = 0
