@@ -456,12 +456,9 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 			info.UpstreamModelName = claudeResponse.Message.Model
 			if claudeResponse.Message.Usage != nil {
 				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
-				usage.CompletionTokens = claudeResponse.Message.Usage.OutputTokens
-				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 			}
 		} else if claudeResponse.Type == "message_delta" {
 			if claudeResponse.Usage != nil {
-				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
 				usage.CompletionTokens = claudeResponse.Usage.OutputTokens
 				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 			}
