@@ -437,33 +437,43 @@ func ResponseClaude2OpenAI(reqMode int, claudeResponse *ClaudeResponse) *dto.Ope
 	return &fullTextResponse
 }
 
-func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, requestMode int) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
+func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
 	var usage *dto.Usage
 	usage = &dto.Usage{}
-
+	var accumulatedText string
+	usage.PromptTokens = info.PromptTokens
 	helper.StreamScannerHandler(c, resp, info, func(data string) bool {
-		// 只需解析出event type和获取usage信息
+		// 原有的响应处理逻辑...
 		var claudeResponse ClaudeStreamResponse
 		err := json.Unmarshal([]byte(data), &claudeResponse)
 		if err != nil {
 			common.SysError("error unmarshalling stream response: " + err.Error())
 			return true
 		}
-		// 仍然需要提取基本信息
+
+		// 如果从响应中获取到了官方的 PromptTokens，则覆盖我们的估算值
 		if claudeResponse.Type == "message_start" {
 			info.UpstreamModelName = claudeResponse.Message.Model
-		} else if claudeResponse.Type == "message_delta" && claudeResponse.Delta.Usage != nil {
-			// 更新usage信息
-			usage.PromptTokens = claudeResponse.Delta.Usage.InputTokens
-			usage.CompletionTokens = claudeResponse.Delta.Usage.OutputTokens
-			usage.TotalTokens = claudeResponse.Delta.Usage.InputTokens + claudeResponse.Delta.Usage.OutputTokens
+			if claudeResponse.Message.Usage != nil {
+				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
+				usage.CompletionTokens = claudeResponse.Message.Usage.OutputTokens
+				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+			}
+		} else if claudeResponse.Type == "message_delta" {
+			if claudeResponse.Usage != nil {
+				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
+				usage.CompletionTokens = claudeResponse.Usage.OutputTokens
+				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+			}
+		} else if claudeResponse.Type == "content_block_delta" {
+			if claudeResponse.Delta.Type == "text_delta" {
+				accumulatedText += claudeResponse.Delta.Text
+			}
 		}
 
-		// 直接使用原始数据，只添加SSE格式
+		// SSE 响应发送逻辑...
 		sseEvent := claudeResponse.Type
 		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, data)
-
-		// 发送格式化的SSE消息
 		_, err = c.Writer.Write([]byte(sseMessage))
 		if err != nil {
 			common.LogError(c, "send_stream_response_failed: "+err.Error())
@@ -473,6 +483,12 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 
 		return true
 	})
+
+	// 在流式处理结束后，如果仍然没有获得 CompletionTokens，则使用累积文本估算
+	if usage.CompletionTokens == 0 && accumulatedText != "" {
+		usage.CompletionTokens = helper.EstimateTokenCount(accumulatedText)
+		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+	}
 
 	return nil, usage
 }

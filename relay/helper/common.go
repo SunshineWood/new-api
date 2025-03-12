@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/pkoukk/tiktoken-go"
 	"net/http"
 	"one-api/common"
 	"one-api/dto"
@@ -37,6 +38,16 @@ func ObjectData(c *gin.Context, object interface{}) error {
 		return fmt.Errorf("error marshalling object: %w", err)
 	}
 	return StringData(c, string(jsonData))
+}
+
+func EstimateTokenCount(text string) int {
+	encoding := "cl100k_base" // Claude 使用的编码
+	tiktoken, err := tiktoken.GetEncoding(encoding)
+	if err != nil {
+		return len(text) / 4 // 粗略估计，如果无法获取分词器
+	}
+	tokens := tiktoken.Encode(text, nil, nil)
+	return len(tokens)
 }
 
 func Done(c *gin.Context) {

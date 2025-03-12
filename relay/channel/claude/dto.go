@@ -96,22 +96,46 @@ type ClaudeUsage struct {
 type ClaudeStreamResponse struct {
 	Type    string `json:"type"`
 	Message struct {
-		Id    string `json:"id"`
-		Model string `json:"model"`
-		Role  string `json:"role"`
-		Type  string `json:"type"`
+		Id           string  `json:"id"`
+		Type         string  `json:"type"`
+		Role         string  `json:"role"`
+		Model        string  `json:"model"`
+		Content      []any   `json:"content"` // 根据示例是一个数组
+		StopReason   *string `json:"stop_reason"`
+		StopSequence *string `json:"stop_sequence"`
+		Usage        *struct {
+			InputTokens              int `json:"input_tokens"`
+			CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+			CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+			OutputTokens             int `json:"output_tokens"`
+		} `json:"usage,omitempty"`
 	} `json:"message,omitempty"`
-	Index        int `json:"index,omitempty"`
-	ContentBlock struct {
-		Type string `json:"type"`
-	} `json:"content_block,omitempty"`
+
 	Delta struct {
-		Text       string `json:"text,omitempty"`
-		StopReason string `json:"stop_reason,omitempty"`
-		Usage      *struct {
+		Type         string  `json:"type,omitempty"`
+		Text         string  `json:"text,omitempty"`
+		StopReason   string  `json:"stop_reason,omitempty"`
+		StopSequence *string `json:"stop_sequence,omitempty"`
+		Usage        *struct {
 			InputTokens  int `json:"input_tokens"`
 			OutputTokens int `json:"output_tokens"`
 		} `json:"usage,omitempty"`
 	} `json:"delta,omitempty"`
+
+	// 顶层 Usage 字段，用于 message_delta 类型的响应
+	Usage *struct {
+		OutputTokens int `json:"output_tokens"`
+	} `json:"usage,omitempty"`
+
+	// 保留这些字段以防其他响应类型需要
+	Index        int `json:"index,omitempty"`
+	ContentBlock struct {
+		Type string `json:"type"`
+	} `json:"content_block,omitempty"`
 	Completion string `json:"completion,omitempty"` // For backward compatibility
+}
+
+type Usage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
 }

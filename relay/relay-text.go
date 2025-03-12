@@ -2,6 +2,7 @@ package relay
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -169,6 +170,24 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		//}
 		//requestBody = bytes.NewBuffer(jsonData)
 		requestBody = c.Request.Body
+	}
+
+	// 注意：这需要在请求体被其他处理函数读取前完成
+	if requestBody != nil {
+		// 保存请求体内容以便重用
+		bodyBytes, err := io.ReadAll(requestBody)
+		if err == nil {
+			// 获取请求头
+			headerBytes, _ := json.Marshal(c.Request.Header)
+			// 估算输入 tokens - 包含请求体和请求头
+			requestContent := string(bodyBytes)
+			headerContent := string(headerBytes)
+			// 组合请求头和请求体来计算总token
+			combinedContent := headerContent + requestContent
+			relayInfo.PromptTokens = helper.EstimateTokenCount(combinedContent)
+			// 重要：创建一个新的 io.ReadCloser 来替代已经被读取的 requestBody
+			requestBody = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		}
 	}
 
 	var httpResp *http.Response

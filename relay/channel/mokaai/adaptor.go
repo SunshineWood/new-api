@@ -73,13 +73,13 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *dto.OpenAIErrorWithStatusCode) {
-		
+
 	switch info.RelayMode {
 	case constant.RelayModeEmbeddings:
 		err, usage = mokaEmbeddingHandler(c, resp)
 	default:
 		// err, usage = mokaHandler(c, resp)
-		
+
 	}
 	return
 }
