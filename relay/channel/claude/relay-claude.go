@@ -438,86 +438,42 @@ func ResponseClaude2OpenAI(reqMode int, claudeResponse *ClaudeResponse) *dto.Ope
 }
 
 func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, requestMode int) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
-	responseId := fmt.Sprintf("chatcmpl-%s", common.GetUUID())
 	var usage *dto.Usage
 	usage = &dto.Usage{}
-	responseText := ""
-	createdTime := common.GetTimestamp()
 
 	helper.StreamScannerHandler(c, resp, info, func(data string) bool {
-		var claudeResponse ClaudeResponse
+		// 只需解析出event type和获取usage信息
+		var claudeResponse ClaudeStreamResponse
 		err := json.Unmarshal([]byte(data), &claudeResponse)
 		if err != nil {
 			common.SysError("error unmarshalling stream response: " + err.Error())
 			return true
 		}
-
-		response, claudeUsage := StreamResponseClaude2OpenAI(requestMode, &claudeResponse)
-		if response == nil {
-			return true
+		// 仍然需要提取基本信息
+		if claudeResponse.Type == "message_start" {
+			info.UpstreamModelName = claudeResponse.Message.Model
+		} else if claudeResponse.Type == "message_delta" && claudeResponse.Delta.Usage != nil {
+			// 更新usage信息
+			usage.PromptTokens = claudeResponse.Delta.Usage.InputTokens
+			usage.CompletionTokens = claudeResponse.Delta.Usage.OutputTokens
+			usage.TotalTokens = claudeResponse.Delta.Usage.InputTokens + claudeResponse.Delta.Usage.OutputTokens
 		}
 
-		if requestMode == RequestModeCompletion {
-			responseText += claudeResponse.Completion
-			responseId = response.Id
-		} else {
-			if claudeResponse.Type == "message_start" {
-				// message_start, 获取usage
-				responseId = claudeResponse.Message.Id
-				info.UpstreamModelName = claudeResponse.Message.Model
-				usage.PromptTokens = claudeUsage.InputTokens
-			} else if claudeResponse.Type == "content_block_delta" {
-				responseText += claudeResponse.Delta.Text
-			} else if claudeResponse.Type == "message_delta" {
-				usage.CompletionTokens = claudeUsage.OutputTokens
-				usage.TotalTokens = claudeUsage.InputTokens + claudeUsage.OutputTokens
-			} else if claudeResponse.Type == "content_block_start" {
-				// Just pass through
-			} else {
-				// Just pass through for other event types
-			}
-		}
-
-		// Format the response as an SSE message
+		// 直接使用原始数据，只添加SSE格式
 		sseEvent := claudeResponse.Type
-		sseData, err := json.Marshal(claudeResponse)
-		if err != nil {
-			common.LogError(c, "error marshalling SSE data: "+err.Error())
-			return true
-		}
+		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, data)
 
-		// Write the SSE message format
-		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, string(sseData))
-
-		// Send the formatted SSE message
+		// 发送格式化的SSE消息
 		_, err = c.Writer.Write([]byte(sseMessage))
 		if err != nil {
 			common.LogError(c, "send_stream_response_failed: "+err.Error())
+			return false
 		}
 		c.Writer.Flush()
 
 		return true
 	})
 
-	if requestMode == RequestModeCompletion {
-		usage, _ = service.ResponseText2Usage(responseText, info.UpstreamModelName, info.PromptTokens)
-	} else {
-		if usage.PromptTokens == 0 {
-			usage.PromptTokens = info.PromptTokens
-		}
-		if usage.CompletionTokens == 0 {
-			usage, _ = service.ResponseText2Usage(responseText, info.UpstreamModelName, usage.PromptTokens)
-		}
-	}
-	if info.ShouldIncludeUsage {
-		response := helper.GenerateFinalUsageResponse(responseId, createdTime, info.UpstreamModelName, *usage)
-		err := helper.ObjectData(c, response)
-		if err != nil {
-			common.SysError("send final response failed: " + err.Error())
-		}
-	}
-	helper.Done(c)
-	//resp.Body.Close()
 	return nil, usage
 }
 

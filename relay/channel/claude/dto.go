@@ -92,3 +92,26 @@ type ClaudeUsage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 }
+
+type ClaudeStreamResponse struct {
+	Type    string `json:"type"`
+	Message struct {
+		Id    string `json:"id"`
+		Model string `json:"model"`
+		Role  string `json:"role"`
+		Type  string `json:"type"`
+	} `json:"message,omitempty"`
+	Index        int `json:"index,omitempty"`
+	ContentBlock struct {
+		Type string `json:"type"`
+	} `json:"content_block,omitempty"`
+	Delta struct {
+		Text       string `json:"text,omitempty"`
+		StopReason string `json:"stop_reason,omitempty"`
+		Usage      *struct {
+			InputTokens  int `json:"input_tokens"`
+			OutputTokens int `json:"output_tokens"`
+		} `json:"usage,omitempty"`
+	} `json:"delta,omitempty"`
+	Completion string `json:"completion,omitempty"` // For backward compatibility
+}

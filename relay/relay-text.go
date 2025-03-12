@@ -2,7 +2,6 @@ package relay
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -160,15 +159,16 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		}
 		requestBody = bytes.NewBuffer(body)
 	} else {
-		convertedRequest, err := adaptor.ConvertRequest(c, relayInfo, textRequest)
-		if err != nil {
-			return service.OpenAIErrorWrapperLocal(err, "convert_request_failed", http.StatusInternalServerError)
-		}
-		jsonData, err := json.Marshal(convertedRequest)
-		if err != nil {
-			return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
-		}
-		requestBody = bytes.NewBuffer(jsonData)
+		//convertedRequest, err := adaptor.ConvertRequest(c, relayInfo, textRequest)
+		//if err != nil {
+		//	return service.OpenAIErrorWrapperLocal(err, "convert_request_failed", http.StatusInternalServerError)
+		//}
+		//jsonData, err := json.Marshal(convertedRequest)
+		//if err != nil {
+		//	return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
+		//}
+		//requestBody = bytes.NewBuffer(jsonData)
+		requestBody = c.Request.Body
 	}
 
 	var httpResp *http.Response
