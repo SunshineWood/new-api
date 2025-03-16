@@ -256,9 +256,7 @@ func OaiStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 		usage.CompletionTokens += toolCount * 7
 	} else {
 		if info.ChannelType == common.ChannelTypeDeepSeek {
-			if usage.PromptCacheHitTokens != 0 {
-				usage.PromptTokensDetails.CachedTokens = usage.PromptCacheHitTokens
-			}
+
 		}
 	}
 

@@ -858,8 +858,10 @@ const LogsTable = () => {
             other?.model_price,
             other?.completion_ratio,
             other?.group_ratio,
+              other?.cache_Creation_Tokens || 0,
             other?.cache_tokens || 0,
             other?.cache_ratio || 1.0,
+              1.25
           );
         }
         expandDataLocal.push({
