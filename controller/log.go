@@ -1,13 +1,12 @@
 package controller
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"one-api/common"
 	"one-api/model"
 	"strconv"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 func GetAllLogs(c *gin.Context) {
@@ -48,10 +47,8 @@ func GetAllLogs(c *gin.Context) {
 }
 
 func GetUserLogs(c *gin.Context) {
-	// 解析分页参数
 	p, _ := strconv.Atoi(c.Query("p"))
 	pageSize, _ := strconv.Atoi(c.Query("page_size"))
-	// 分页参数校验与默认值设置
 	if p < 1 {
 		p = 1
 	}
@@ -69,22 +66,6 @@ func GetUserLogs(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
 	group := c.Query("group")
-	rawApiKey := c.Query("api_key")
-	var apiKey string
-	if rawApiKey != "" {
-		parts := strings.Split(rawApiKey, "-")
-		if len(parts) >= 2 {
-			apiKey = parts[1]
-		}
-	}
-	// 如果token_name为空且api_key不为空，通过api_key查找对应的token_name
-	if tokenName == "" && apiKey != "" {
-		// 使用现有的GetTokenByKey函数查询token
-		token, err := model.GetTokenByKey(apiKey, false)
-		if err == nil && token != nil {
-			tokenName = token.Name
-		}
-	}
 	// 获取日志数据 - 已经包含了"id desc"的排序
 	logs, total, err := model.GetUserLogs(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, (p-1)*pageSize, pageSize, group)
 	if err != nil {
@@ -126,9 +107,63 @@ func SearchAllLogs(c *gin.Context) {
 }
 
 func SearchUserLogs(c *gin.Context) {
-	keyword := c.Query("keyword")
+	p, _ := strconv.Atoi(c.Query("p"))
+	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	if p < 1 {
+		p = 1
+	}
+	if pageSize < 0 {
+		pageSize = common.ItemsPerPage
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
 	userId := c.GetInt("id")
-	logs, err := model.SearchUserLogs(userId, keyword)
+	logType, _ := strconv.Atoi(c.Query("type"))
+	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
+	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	modelName := c.Query("model_name")
+	group := c.Query("group")
+	rawApiKey := c.Query("api_key")
+
+	if rawApiKey == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Either api_key must be provided",
+		})
+		return
+	}
+
+	var apiKey, tokenName string
+	parts := strings.Split(rawApiKey, "-")
+	if len(parts) >= 2 {
+		apiKey = parts[1]
+	} else {
+		apiKey = rawApiKey
+	}
+
+	token, err := model.GetTokenByKey(apiKey, false)
+	if err != nil || token == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Cannot find token with the provided api_key",
+			"api_key": rawApiKey,
+		})
+		return
+	}
+
+	tokenName = token.Name
+	if tokenName == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "Token name not found for the provided api_key",
+			"api_key": rawApiKey,
+		})
+		return
+	}
+
+	logs, total, err := model.GetUserLogs(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, (p-1)*pageSize, pageSize, group)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -136,12 +171,17 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    logs,
+		"data": map[string]any{
+			"items":     logs,
+			"total":     total,
+			"page":      p,
+			"page_size": pageSize,
+		},
 	})
-	return
 }
 
 func GetLogByKey(c *gin.Context) {
