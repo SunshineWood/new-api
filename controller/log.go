@@ -5,6 +5,7 @@ import (
 	"one-api/common"
 	"one-api/model"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -47,8 +48,10 @@ func GetAllLogs(c *gin.Context) {
 }
 
 func GetUserLogs(c *gin.Context) {
+	// 解析分页参数
 	p, _ := strconv.Atoi(c.Query("p"))
 	pageSize, _ := strconv.Atoi(c.Query("page_size"))
+	// 分页参数校验与默认值设置
 	if p < 1 {
 		p = 1
 	}
@@ -58,6 +61,7 @@ func GetUserLogs(c *gin.Context) {
 	if pageSize > 100 {
 		pageSize = 100
 	}
+	// 提取用户ID和查询参数
 	userId := c.GetInt("id")
 	logType, _ := strconv.Atoi(c.Query("type"))
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
@@ -65,6 +69,23 @@ func GetUserLogs(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
 	group := c.Query("group")
+	rawApiKey := c.Query("api_key")
+	var apiKey string
+	if rawApiKey != "" {
+		parts := strings.Split(rawApiKey, "-")
+		if len(parts) >= 2 {
+			apiKey = parts[1]
+		}
+	}
+	// 如果token_name为空且api_key不为空，通过api_key查找对应的token_name
+	if tokenName == "" && apiKey != "" {
+		// 使用现有的GetTokenByKey函数查询token
+		token, err := model.GetTokenByKey(apiKey, false)
+		if err == nil && token != nil {
+			tokenName = token.Name
+		}
+	}
+	// 获取日志数据 - 已经包含了"id desc"的排序
 	logs, total, err := model.GetUserLogs(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, (p-1)*pageSize, pageSize, group)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -73,6 +94,7 @@ func GetUserLogs(c *gin.Context) {
 		})
 		return
 	}
+	// 返回成功响应
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -83,7 +105,6 @@ func GetUserLogs(c *gin.Context) {
 			"page_size": pageSize,
 		},
 	})
-	return
 }
 
 func SearchAllLogs(c *gin.Context) {
