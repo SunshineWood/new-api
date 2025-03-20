@@ -118,7 +118,6 @@ func SearchUserLogs(c *gin.Context) {
 	if pageSize > 100 {
 		pageSize = 100
 	}
-
 	userId := c.GetInt("id")
 	logType, _ := strconv.Atoi(c.Query("type"))
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
@@ -126,7 +125,6 @@ func SearchUserLogs(c *gin.Context) {
 	modelName := c.Query("model_name")
 	group := c.Query("group")
 	rawApiKey := c.Query("api_key")
-
 	if rawApiKey == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -134,7 +132,6 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
-
 	var apiKey, tokenName string
 	parts := strings.Split(rawApiKey, "-")
 	if len(parts) >= 2 {
@@ -142,7 +139,6 @@ func SearchUserLogs(c *gin.Context) {
 	} else {
 		apiKey = rawApiKey
 	}
-
 	token, err := model.GetTokenByKey(apiKey, false)
 	if err != nil || token == nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -152,7 +148,6 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
-
 	tokenName = token.Name
 	if tokenName == "" {
 		c.JSON(http.StatusOK, gin.H{
@@ -162,7 +157,6 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
-
 	logs, total, err := model.GetUserLogs(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, (p-1)*pageSize, pageSize, group)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -171,7 +165,6 @@ func SearchUserLogs(c *gin.Context) {
 		})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
