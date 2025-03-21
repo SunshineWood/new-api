@@ -188,6 +188,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 			// 重要：创建一个新的 io.ReadCloser 来替代已经被读取的 requestBody
 			requestBody = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		}
+		requestBody = bytes.NewBuffer(jsonData)
 	}
 
 	var httpResp *http.Response
@@ -235,8 +236,6 @@ func getPromptTokens(textRequest *dto.GeneralOpenAIRequest, info *relaycommon.Re
 	case relayconstant.RelayModeModerations:
 		promptTokens, err = service.CountTokenInput(textRequest.Input, textRequest.Model)
 	case relayconstant.RelayModeEmbeddings:
-		promptTokens, err = service.CountTokenInput(textRequest.Input, textRequest.Model)
-	case relayconstant.RelayModeMessages:
 		promptTokens, err = service.CountTokenInput(textRequest.Input, textRequest.Model)
 	default:
 		err = errors.New("unknown relay mode")
@@ -332,7 +331,6 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	useTimeSeconds := time.Now().Unix() - relayInfo.StartTime.Unix()
 	promptTokens := usage.PromptTokens
 	cacheTokens := usage.PromptTokensDetails.CachedTokens
-	cacheCreationTokens := usage.PromptTokensDetails.CacheCreationTokens
 	completionTokens := usage.CompletionTokens
 	modelName := relayInfo.OriginModelName
 
@@ -346,7 +344,6 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	// Convert values to decimal for precise calculation
 	dPromptTokens := decimal.NewFromInt(int64(promptTokens))
 	dCacheTokens := decimal.NewFromInt(int64(cacheTokens))
-	dCacheCreationTokens := decimal.NewFromInt(int64(cacheCreationTokens))
 	dCompletionTokens := decimal.NewFromInt(int64(completionTokens))
 	dCompletionRatio := decimal.NewFromFloat(completionRatio)
 	dCacheRatio := decimal.NewFromFloat(cacheRatio)
@@ -361,10 +358,11 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	if !priceData.UsePrice {
 		nonCachedTokens := dPromptTokens.Sub(dCacheTokens)
 		cachedTokensWithRatio := dCacheTokens.Mul(dCacheRatio)
-		cachedCreationTokensWithRatio := dCacheCreationTokens.Mul(decimal.NewFromFloat(1.25))
-		promptQuota := nonCachedTokens.Add(cachedTokensWithRatio).Add(cachedCreationTokensWithRatio)
+		promptQuota := nonCachedTokens.Add(cachedTokensWithRatio)
 		completionQuota := dCompletionTokens.Mul(dCompletionRatio)
+
 		quotaCalculateDecimal = promptQuota.Add(completionQuota).Mul(ratio)
+
 		if !ratio.IsZero() && quotaCalculateDecimal.LessThanOrEqual(decimal.Zero) {
 			quotaCalculateDecimal = decimal.NewFromInt(1)
 		}
@@ -414,7 +412,7 @@ func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,
 	if extraContent != "" {
 		logContent += ", " + extraContent
 	}
-	other := service.GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, cacheCreationTokens, cacheTokens, cacheRatio, modelPrice)
+	other := service.GenerateTextOtherInfo(ctx, relayInfo, modelRatio, groupRatio, completionRatio, cacheTokens, cacheRatio, modelPrice)
 	model.RecordConsumeLog(ctx, relayInfo.UserId, relayInfo.ChannelId, promptTokens, completionTokens, logModel,
 		tokenName, quota, logContent, relayInfo.TokenId, userQuota, int(useTimeSeconds), relayInfo.IsStream, relayInfo.Group, other)
 }

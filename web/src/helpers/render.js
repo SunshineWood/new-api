@@ -75,20 +75,20 @@ const measureTextWidth = (text, style = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 }, containerWidth) => {
   const span = document.createElement('span');
-
+  
   span.style.visibility = 'hidden';
   span.style.position = 'absolute';
   span.style.whiteSpace = 'nowrap';
   span.style.fontSize = style.fontSize;
   span.style.fontFamily = style.fontFamily;
-
+  
   span.textContent = text;
-
+  
   document.body.appendChild(span);
   const width = span.offsetWidth;
-
+  
   document.body.removeChild(span);
-
+  
   return width;
 };
 
@@ -96,10 +96,8 @@ export function truncateText(text, maxWidth = 200) {
   if (!isMobile()) {
     return text;
   }
-  if (!text) {
-    return text;
-  }
-
+  if (!text) return text;
+  
   try {
     // Handle percentage-based maxWidth
     let actualMaxWidth = maxWidth;
@@ -108,21 +106,19 @@ export function truncateText(text, maxWidth = 200) {
       // Use window width as fallback container width
       actualMaxWidth = window.innerWidth * percentage;
     }
-
+    
     const width = measureTextWidth(text);
-    if (width <= actualMaxWidth) {
-      return text;
-    }
-
+    if (width <= actualMaxWidth) return text;
+    
     let left = 0;
     let right = text.length;
     let result = text;
-
+    
     while (left <= right) {
       const mid = Math.floor((left + right) / 2);
       const truncated = text.slice(0, mid) + '...';
       const currentWidth = measureTextWidth(truncated);
-
+      
       if (currentWidth <= actualMaxWidth) {
         result = truncated;
         left = mid + 1;
@@ -130,11 +126,10 @@ export function truncateText(text, maxWidth = 200) {
         right = mid - 1;
       }
     }
-
+    
     return result;
   } catch (error) {
-    console.warn('Text measurement failed, falling back to character count',
-        error);
+    console.warn('Text measurement failed, falling back to character count', error);
     if (text.length > 20) {
       return text.slice(0, 17) + '...';
     }
@@ -157,11 +152,11 @@ export const renderGroupOption = (item) => {
     emptyContent,
     ...rest
   } = item;
-
+  
   const baseStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    display: 'flex', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
     padding: '8px 16px',
     cursor: disabled ? 'not-allowed' : 'pointer',
     backgroundColor: focused ? 'var(--semi-color-fill-0)' : 'transparent',
@@ -185,23 +180,23 @@ export const renderGroupOption = (item) => {
       onMouseEnter(e);
     }
   };
-
+  
   return (
-      <div
-          style={baseStyle}
-          onClick={handleClick}
-          onMouseEnter={handleMouseEnter}
-      >
-        <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
-          <Typography.Text strong type={disabled ? 'tertiary' : undefined}>
-            {value}
-          </Typography.Text>
-          <Typography.Text type="secondary" size="small">
-            {label}
-          </Typography.Text>
-        </div>
-        {item.ratio && renderRatio(item.ratio)}
+    <div 
+      style={baseStyle}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <Typography.Text strong type={disabled ? 'tertiary' : undefined}>
+          {value}
+        </Typography.Text>
+        <Typography.Text type="secondary" size="small">
+          {label}
+        </Typography.Text>
       </div>
+      {item.ratio && renderRatio(item.ratio)}
+    </div>
   );
 };
 
@@ -230,9 +225,8 @@ export function renderQuotaNumberWithDigit(num, digits = 2) {
 }
 
 export function renderNumberWithPoint(num) {
-  if (num === undefined) {
+  if (num === undefined)
     return '';
-  }
   num = num.toFixed(2);
   if (num >= 100000) {
     // Convert number to string to manipulate it
@@ -301,16 +295,14 @@ export function renderQuota(quota, digits = 2) {
 }
 
 export function renderModelPrice(
-    inputTokens,
-    completionTokens,
-    modelRatio,
-    modelPrice = -1,
-    completionRatio,
-    groupRatio,
-    cacheCreateTokens = 0,
-    cacheTokens = 0,
-    cacheRatio = 1.0,
-    cacheCreateRatio = 1.25
+  inputTokens,
+  completionTokens,
+  modelRatio,
+  modelPrice = -1,
+  completionRatio,
+  groupRatio,
+  cacheTokens = 0,
+  cacheRatio = 1.0,
 ) {
   if (modelPrice !== -1) {
     return i18next.t('模型价格：${{price}} * 分组倍率：{{ratio}} = ${{total}}', {
@@ -325,27 +317,14 @@ export function renderModelPrice(
     let inputRatioPrice = modelRatio * 2.0;
     let completionRatioPrice = modelRatio * 2.0 * completionRatio;
     let cacheRatioPrice = modelRatio * 2.0 * cacheRatio;
-
-// Calculate effective input tokens (non-cached + cached with ratio applied)
-    const effectiveInputTokens = (inputTokens - cacheTokens) + (cacheTokens
-        * cacheRatio);
-
-// Calculate price including cache creation cost if applicable
-    let price;
-    if (cacheCreateTokens > 0) {
-      // 假设缓存创建比率为 cacheCreateRatio
-      let cacheCreateCost = (cacheCreateTokens * cacheCreateRatio / 1000000)
-          * inputRatioPrice;
-      price =
-          (effectiveInputTokens / 1000000) * inputRatioPrice * groupRatio +
-          (completionTokens / 1000000) * completionRatioPrice * groupRatio +
-          cacheCreateCost* groupRatio;
-    } else {
-      price =
-          (effectiveInputTokens / 1000000) * inputRatioPrice * groupRatio +
-          (completionTokens / 1000000) * completionRatioPrice * groupRatio;
-    }
-
+    
+    // Calculate effective input tokens (non-cached + cached with ratio applied)
+    const effectiveInputTokens = (inputTokens - cacheTokens) + (cacheTokens * cacheRatio);
+    
+    let price =
+      (effectiveInputTokens / 1000000) * inputRatioPrice * groupRatio +
+      (completionTokens / 1000000) * completionRatioPrice * groupRatio;
+    
     return (
         <>
           <article>
@@ -428,11 +407,11 @@ export function renderModelPrice(
 }
 
 export function renderModelPriceSimple(
-    modelRatio,
-    modelPrice = -1,
-    groupRatio,
-    cacheTokens = 0,
-    cacheRatio = 1.0,
+  modelRatio,
+  modelPrice = -1,
+  groupRatio,
+  cacheTokens = 0,
+  cacheRatio = 1.0,
 ) {
   if (modelPrice !== -1) {
     return i18next.t('价格：${{price}} * 分组：{{ratio}}', {
@@ -441,12 +420,11 @@ export function renderModelPriceSimple(
     });
   } else {
     if (cacheTokens !== 0) {
-      return i18next.t(
-          '模型: {{ratio}} * 分组: {{groupRatio}} * 缓存: {{cacheRatio}}', {
-            ratio: modelRatio,
-            groupRatio: groupRatio,
-            cacheRatio: cacheRatio
-          });
+      return i18next.t('模型: {{ratio}} * 分组: {{groupRatio}} * 缓存: {{cacheRatio}}', {
+        ratio: modelRatio,
+        groupRatio: groupRatio,
+        cacheRatio: cacheRatio
+      });
     } else {
       return i18next.t('模型: {{ratio}} * 分组: {{groupRatio}}', {
         ratio: modelRatio,
@@ -457,18 +435,18 @@ export function renderModelPriceSimple(
 }
 
 export function renderAudioModelPrice(
-    inputTokens,
-    completionTokens,
-    modelRatio,
-    modelPrice = -1,
-    completionRatio,
-    audioInputTokens,
-    audioCompletionTokens,
-    audioRatio,
-    audioCompletionRatio,
-    groupRatio,
-    cacheTokens = 0,
-    cacheRatio = 1.0,
+  inputTokens,
+  completionTokens,
+  modelRatio,
+  modelPrice = -1,
+  completionRatio,
+  audioInputTokens,
+  audioCompletionTokens,
+  audioRatio,
+  audioCompletionRatio,
+  groupRatio,
+  cacheTokens = 0,
+  cacheRatio = 1.0,
 ) {
   // 1 ratio = $0.002 / 1K tokens
   if (modelPrice !== -1) {
@@ -488,19 +466,16 @@ export function renderAudioModelPrice(
     let inputRatioPrice = modelRatio * 2.0;
     let completionRatioPrice = modelRatio * 2.0 * completionRatio;
     let cacheRatioPrice = modelRatio * 2.0 * cacheRatio;
-
+    
     // Calculate effective input tokens (non-cached + cached with ratio applied)
-    const effectiveInputTokens = (inputTokens - cacheTokens) + (cacheTokens
-        * cacheRatio);
-
+    const effectiveInputTokens = (inputTokens - cacheTokens) + (cacheTokens * cacheRatio);
+    
     let textPrice =
-        (effectiveInputTokens / 1000000) * inputRatioPrice * groupRatio +
-        (completionTokens / 1000000) * completionRatioPrice * groupRatio
+      (effectiveInputTokens / 1000000) * inputRatioPrice * groupRatio +
+      (completionTokens / 1000000) * completionRatioPrice * groupRatio
     let audioPrice =
-        (audioInputTokens / 1000000) * inputRatioPrice * audioRatio * groupRatio
-        +
-        (audioCompletionTokens / 1000000) * inputRatioPrice * audioRatio
-        * audioCompletionRatio * groupRatio;
+      (audioInputTokens / 1000000) * inputRatioPrice * audioRatio * groupRatio +
+      (audioCompletionTokens / 1000000) * inputRatioPrice * audioRatio * audioCompletionRatio * groupRatio;
     let price = textPrice + audioPrice;
     return (
         <>
@@ -596,8 +571,7 @@ export function renderQuotaWithPrompt(quota, digits) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return ' | ' + i18next.t('等价金额') + ': ' + renderQuota(quota, digits)
-        + '';
+    return ' | ' + i18next.t('等价金额') + ': ' + renderQuota(quota, digits) + '';
   }
   return '';
 }
@@ -718,7 +692,7 @@ export function modelToColor(modelName) {
 
   // 3. 根据模型名称长度选择不同的色板
   const colorPalette = modelName.length > 10 ? extendedColors : baseColors;
-
+  
   // 4. 使用hash值选择颜色
   const index = hash % colorPalette.length;
   return colorPalette[index];

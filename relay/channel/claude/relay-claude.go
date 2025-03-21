@@ -463,19 +463,15 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 				usage.CompletionTokens = claudeResponse.Usage.OutputTokens
 				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 			}
-		} else if claudeResponse.Type == "content_block_delta" {
-			if claudeResponse.Delta.Type == "text_delta" {
-				accumulatedText += claudeResponse.Delta.Text
-			}
 		}
+		//response.Id = responseId
+		response.Id = responseId
+		response.Created = createdTime
+		response.Model = info.UpstreamModelName
 
-		// SSE 响应发送逻辑...
-		sseEvent := claudeResponse.Type
-		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, data)
-		_, err = c.Writer.Write([]byte(sseMessage))
+		err = helper.ObjectData(c, response)
 		if err != nil {
 			common.LogError(c, "send_stream_response_failed: "+err.Error())
-			return false
 		}
 		c.Writer.Flush()
 
