@@ -60,7 +60,6 @@ func testChannel(channel *model.Channel, testModel string) (err error, openAIErr
 		Body:   nil,
 		Header: make(http.Header),
 	}
-
 	if testModel == "" {
 		if channel.TestModel != nil && *channel.TestModel != "" {
 			testModel = *channel.TestModel

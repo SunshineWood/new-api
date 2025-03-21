@@ -30,7 +30,6 @@ func stopReasonClaude2OpenAI(reason string) string {
 }
 
 func RequestOpenAI2ClaudeComplete(textRequest dto.GeneralOpenAIRequest) *ClaudeRequest {
-
 	claudeRequest := ClaudeRequest{
 		Model:         textRequest.Model,
 		Prompt:        "",
@@ -490,6 +489,64 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 	}
 
 	return nil, usage
+}
+
+func ClaudeStreamHandlerToOpenAi(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo, requestMode int) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
+	claudeInfo := &ClaudeResponseInfo{
+		ResponseId:   fmt.Sprintf("chatcmpl-%s", common.GetUUID()),
+		Created:      common.GetTimestamp(),
+		Model:        info.UpstreamModelName,
+		ResponseText: strings.Builder{},
+		Usage:        &dto.Usage{},
+	}
+	var err *dto.OpenAIErrorWithStatusCode
+	//helper.StreamScannerHandler(c, resp, info, func(data string) bool {
+	//	err = HandleStreamResponseData(c, info, claudeInfo, data, requestMode)
+	//	if err != nil {
+	//		return false
+	//	}
+	//	return true
+	//})
+	if err != nil {
+		return err, nil
+	}
+	HandleStreamFinalResponse(c, info, claudeInfo, requestMode)
+	return nil, claudeInfo.Usage
+}
+
+func HandleStreamFinalResponse(c *gin.Context, info *relaycommon.RelayInfo, claudeInfo *ClaudeResponseInfo, requestMode int) {
+	if info.RelayFormat == relaycommon.RelayFormatClaude {
+		if requestMode == RequestModeCompletion {
+			claudeInfo.Usage, _ = service.ResponseText2Usage(claudeInfo.ResponseText.String(), info.UpstreamModelName, info.PromptTokens)
+		} else {
+			// 说明流模式建立失败，可能为官方出错
+			if claudeInfo.Usage.PromptTokens == 0 {
+				//usage.PromptTokens = info.PromptTokens
+			}
+			if claudeInfo.Usage.CompletionTokens == 0 {
+				claudeInfo.Usage, _ = service.ResponseText2Usage(claudeInfo.ResponseText.String(), info.UpstreamModelName, claudeInfo.Usage.PromptTokens)
+			}
+		}
+	} else if info.RelayFormat == relaycommon.RelayFormatOpenAI {
+		if requestMode == RequestModeCompletion {
+			claudeInfo.Usage, _ = service.ResponseText2Usage(claudeInfo.ResponseText.String(), info.UpstreamModelName, info.PromptTokens)
+		} else {
+			if claudeInfo.Usage.PromptTokens == 0 {
+				//上游出错
+			}
+			if claudeInfo.Usage.CompletionTokens == 0 {
+				claudeInfo.Usage, _ = service.ResponseText2Usage(claudeInfo.ResponseText.String(), info.UpstreamModelName, claudeInfo.Usage.PromptTokens)
+			}
+		}
+		if info.ShouldIncludeUsage {
+			response := helper.GenerateFinalUsageResponse(claudeInfo.ResponseId, claudeInfo.Created, info.UpstreamModelName, *claudeInfo.Usage)
+			err := helper.ObjectData(c, response)
+			if err != nil {
+				common.SysError("send final response failed: " + err.Error())
+			}
+		}
+		helper.Done(c)
+	}
 }
 
 func ClaudeHandler(c *gin.Context, resp *http.Response, requestMode int, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {

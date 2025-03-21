@@ -17,6 +17,21 @@ type ThinkingContentInfo struct {
 	SendLastThinkingContent bool
 }
 
+const (
+	RelayFormatOpenAI = "openai"
+	RelayFormatClaude = "claude"
+)
+
+type ClaudeConvertInfo struct {
+	LastMessagesType string
+	Index            int
+}
+
+type RerankerInfo struct {
+	Documents       []any
+	ReturnDocuments bool
+}
+
 type RelayInfo struct {
 	ChannelType       int
 	ChannelId         int
@@ -58,7 +73,11 @@ type RelayInfo struct {
 	UserSetting          map[string]interface{}
 	UserEmail            string
 	UserQuota            int
+	RelayFormat          string
+	SendResponseCount    int
 	ThinkingContentInfo
+	ClaudeConvertInfo
+	*RerankerInfo
 }
 
 // 定义支持流式选项的通道类型

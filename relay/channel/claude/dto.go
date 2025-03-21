@@ -1,5 +1,10 @@
 package claude
 
+import (
+	"one-api/dto"
+	"strings"
+)
+
 type ClaudeMetadata struct {
 	UserId string `json:"user_id"`
 }
@@ -86,6 +91,14 @@ type ClaudeResponse struct {
 	ContentBlock *ClaudeMediaMessage  `json:"content_block"`
 	Delta        *ClaudeMediaMessage  `json:"delta"`   // stream only
 	Message      *ClaudeResponse      `json:"message"` // stream only: message_start
+}
+
+type ClaudeResponseInfo struct {
+	ResponseId   string
+	Created      int64
+	Model        string
+	ResponseText strings.Builder
+	Usage        *dto.Usage
 }
 
 type ClaudeUsage struct {

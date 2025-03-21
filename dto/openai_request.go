@@ -100,12 +100,6 @@ type ToolAnthropicRequest struct {
 	InputSchema InputSchema `json:"input_schema"`
 }
 
-type InputSchema struct {
-	Type       string              `json:"type"`
-	Properties map[string]Property `json:"properties"`
-	Required   []string            `json:"required,omitempty"`
-}
-
 type Property struct {
 	Type        string `json:"type"`
 	Description string `json:"description,omitempty"`
