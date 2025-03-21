@@ -172,7 +172,7 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 	if info.IsStream {
 		switch a.RequestMode {
 		case RequestModeClaude:
-			err, usage = claude.ClaudeStreamHandler(c, resp, info)
+			err, usage = claude.ClaudeStreamHandler(c, resp, info, a.RequestMode)
 		case RequestModeGemini:
 			err, usage = gemini.GeminiChatStreamHandler(c, resp, info)
 		case RequestModeLlama:

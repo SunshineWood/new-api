@@ -38,21 +38,6 @@ type RerankerInfo struct {
 	ReturnDocuments bool
 }
 
-const (
-	RelayFormatOpenAI = "openai"
-	RelayFormatClaude = "claude"
-)
-
-type ClaudeConvertInfo struct {
-	LastMessagesType string
-	Index            int
-}
-
-type RerankerInfo struct {
-	Documents       []any
-	ReturnDocuments bool
-}
-
 type RelayInfo struct {
 	ChannelType       int
 	ChannelId         int

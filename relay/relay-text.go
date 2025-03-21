@@ -109,7 +109,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		c.Set("prompt_tokens", promptTokens)
 	}
 
-	priceData, err := helper.ModelPriceHelper(c, relayInfo, promptTokens, int(textRequest.MaxTokens))
+	priceData, err := helper.ModelPriceHelper(c, relayInfo, promptTokens, int(math.Max(float64(textRequest.MaxTokens), float64(textRequest.MaxCompletionTokens))))
 	if err != nil {
 		return service.OpenAIErrorWrapperLocal(err, "model_price_error", http.StatusInternalServerError)
 	}
@@ -160,33 +160,16 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 		}
 		requestBody = bytes.NewBuffer(body)
 	} else {
-		//convertedRequest, err := adaptor.ConvertRequest(c, relayInfo, textRequest)
-		//if err != nil {
-		//	return service.OpenAIErrorWrapperLocal(err, "convert_request_failed", http.StatusInternalServerError)
-		//}
-		//jsonData, err := json.Marshal(convertedRequest)
-		//if err != nil {
-		//	return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
-		//}
-		//requestBody = bytes.NewBuffer(jsonData)
-		requestBody = c.Request.Body
-	}
-
-	// 注意：这需要在请求体被其他处理函数读取前完成
-	if requestBody != nil {
-		// 保存请求体内容以便重用
-		bodyBytes, err := io.ReadAll(requestBody)
-		if err == nil {
-			// 获取请求头
-			headerBytes, _ := json.Marshal(c.Request.Header)
-			// 估算输入 tokens - 包含请求体和请求头
-			requestContent := string(bodyBytes)
-			headerContent := string(headerBytes)
-			// 组合请求头和请求体来计算总token
-			combinedContent := headerContent + requestContent
-			relayInfo.PromptTokens = helper.EstimateTokenCount(combinedContent)
-			// 重要：创建一个新的 io.ReadCloser 来替代已经被读取的 requestBody
-			requestBody = io.NopCloser(bytes.NewBuffer(bodyBytes))
+		convertedRequest, err := adaptor.ConvertOpenAIRequest(c, relayInfo, textRequest)
+		if err != nil {
+			return service.OpenAIErrorWrapperLocal(err, "convert_request_failed", http.StatusInternalServerError)
+		}
+		jsonData, err := json.Marshal(convertedRequest)
+		if err != nil {
+			return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
+		}
+		if common.DebugEnabled {
+			println("requestBody: ", string(jsonData))
 		}
 		requestBody = bytes.NewBuffer(jsonData)
 	}

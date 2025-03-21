@@ -37,7 +37,6 @@ func SetRelayRouter(router *gin.Engine) {
 		httpRouter.Use(middleware.Distribute())
 		httpRouter.POST("/messages", controller.RelayClaude)
 		httpRouter.POST("/completions", controller.Relay)
-		httpRouter.POST("/messages", controller.Relay)
 		httpRouter.POST("/chat/completions", controller.Relay)
 		httpRouter.POST("/edits", controller.Relay)
 		httpRouter.POST("/images/generations", controller.Relay)

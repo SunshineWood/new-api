@@ -166,6 +166,7 @@ func RelayClaude(c *gin.Context) {
 		claudeErr = claudeRequest(c, channel)
 
 		if claudeErr == nil {
+
 			return // 成功处理请求，直接返回
 		}
 
