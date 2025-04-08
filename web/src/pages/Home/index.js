@@ -154,7 +154,7 @@ const Home = () => {
                 </p>
 
                 <p>💰 为方便计费，一个账号通用本站所有模型，本站当前兑换比例为<span
-                    className="highlight">5元RMB兑换1刀额度，模型计费全部公开透明，目前同步官方计费，全部为官方账号转发API<a
+                    className="highlight">模型计费全部公开透明，目前同步官方计费，全部为官方账号转发API<a
                     href="https://api.mossx.tech/log">日志</a>中点选记录可显示具体的计费公式</span>
                 </p>
 

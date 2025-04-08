@@ -594,6 +594,8 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 func ClaudeOriginStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
 	var usage *dto.Usage
 	usage = &dto.Usage{}
+	//errChan := make(chan error, 2)
+	//sumUsage := &dto.RealtimeUsage{}
 	var accumulatedText string
 	usage.PromptTokens = info.PromptTokens
 	helper.StreamScannerHandler(c, resp, info, func(data string) bool {
@@ -609,7 +611,7 @@ func ClaudeOriginStreamHandler(c *gin.Context, resp *http.Response, info *relayc
 		if claudeResponse.Type == "message_start" {
 			info.UpstreamModelName = claudeResponse.Message.Model
 			if claudeResponse.Message.Usage != nil {
-				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens + claudeResponse.Message.Usage.CacheReadInputTokens
+				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
 				usage.PromptTokensDetails.CachedCreationTokens = claudeResponse.Message.Usage.CacheCreationInputTokens
 				usage.PromptTokensDetails.CachedTokens = claudeResponse.Message.Usage.CacheReadInputTokens
 			}
@@ -623,6 +625,7 @@ func ClaudeOriginStreamHandler(c *gin.Context, resp *http.Response, info *relayc
 				accumulatedText += *claudeResponse.Delta.Text
 			}
 		}
+
 		// SSE 响应发送逻辑...
 		sseEvent := claudeResponse.Type
 		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, data)
