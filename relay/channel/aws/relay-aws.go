@@ -177,6 +177,11 @@ func awsStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 	for event := range stream.Events() {
 		switch v := event.(type) {
 		case *types.ResponseStreamMemberChunk:
+			// Skip empty chunks to avoid sending empty data to clients
+			if len(v.Value.Bytes) == 0 || strings.TrimSpace(string(v.Value.Bytes)) == "" {
+				continue
+			}
+
 			info.SetFirstResponseTime()
 			respErr := claude.HandleStreamResponseData(c, info, claudeInfo, string(v.Value.Bytes), RequestModeMessage)
 			if respErr != nil {

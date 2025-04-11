@@ -481,6 +481,11 @@ func FormatClaudeResponseInfo(requestMode int, claudeResponse *dto.ClaudeRespons
 }
 
 func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claudeInfo *ClaudeResponseInfo, data string, requestMode int) *dto.OpenAIErrorWithStatusCode {
+	// Skip empty data which can cause empty JSON responses
+	if len(data) == 0 || strings.TrimSpace(data) == "" {
+		return nil
+	}
+
 	var claudeResponse dto.ClaudeResponse
 	err := common.DecodeJsonStr(data, &claudeResponse)
 	if err != nil {

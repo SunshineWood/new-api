@@ -52,8 +52,9 @@ type InputTokenDetails struct {
 }
 
 type OutputTokenDetails struct {
-	TextTokens  int `json:"text_tokens"`
-	AudioTokens int `json:"audio_tokens"`
+	TextTokens      int `json:"text_tokens"`
+	AudioTokens     int `json:"audio_tokens"`
+	ReasoningTokens int `json:"reasoning_tokens"`
 }
 
 type RealtimeSession struct {
