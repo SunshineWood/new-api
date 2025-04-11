@@ -190,6 +190,8 @@ func buildTestRequest(model string) *dto.GeneralOpenAIRequest {
 		if !strings.Contains(model, "claude") {
 			testRequest.MaxTokens = 50
 		}
+	} else if strings.Contains(model, "gemini") {
+		testRequest.MaxTokens = 300
 	} else {
 		testRequest.MaxTokens = 10
 	}
