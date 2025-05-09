@@ -19,17 +19,27 @@ const FooterBar = () => {
   };
 
   const defaultFooter = (
-      <div className='custom-footer'>
-        {t('由')}{' '}
-        <span>MossX AI提供技术支持</span>{' '}
-        <a
-            href='https://beian.miit.gov.cn/'
-            target='_blank'
-            rel='noreferrer'
-        >
-          京ICP备2025105153号-3
-        </a>
-      </div>
+    <div className='custom-footer'>
+      <a
+        href='https://github.com/Calcium-Ion/new-api'
+        target='_blank'
+        rel='noreferrer'
+      >
+        New API {import.meta.env.VITE_REACT_APP_VERSION}{' '}
+      </a>
+      {t('由')}{' '}
+      <a href='https://github.com/Calcium-Ion' target='_blank' rel='noreferrer'>
+        Calcium-Ion
+      </a>{' '}
+      {t('开发，基于')}{' '}
+      <a
+        href='https://github.com/songquanpeng/one-api'
+        target='_blank'
+        rel='noreferrer'
+      >
+        One API
+      </a>
+    </div>
   );
 
   useEffect(() => {
@@ -45,10 +55,12 @@ const FooterBar = () => {
   }, []);
 
   return (
-    <div style={{
-      textAlign: 'center',
-      paddingBottom: '5px',
-    }}>
+    <div
+      style={{
+        textAlign: 'center',
+        paddingBottom: '5px',
+      }}
+    >
       {footer ? (
         <div
           className='custom-footer'
