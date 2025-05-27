@@ -10,22 +10,23 @@ import (
 	"net/http"
 	"one-api/common"
 	"one-api/dto"
+	"strings"
 )
 
 func SetEventStreamHeaders(c *gin.Context) {
-    // 检查是否已经设置过头部
-    if _, exists := c.Get("event_stream_headers_set"); exists {
-        return
-    }
-    
-    c.Writer.Header().Set("Content-Type", "text/event-stream")
-    c.Writer.Header().Set("Cache-Control", "no-cache")
-    c.Writer.Header().Set("Connection", "keep-alive")
-    c.Writer.Header().Set("Transfer-Encoding", "chunked")
-    c.Writer.Header().Set("X-Accel-Buffering", "no")
-    
-    // 设置标志，表示头部已经设置过
-    c.Set("event_stream_headers_set", true)
+	// 检查是否已经设置过头部
+	if _, exists := c.Get("event_stream_headers_set"); exists {
+		return
+	}
+
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("Transfer-Encoding", "chunked")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+
+	// 设置标志，表示头部已经设置过
+	c.Set("event_stream_headers_set", true)
 }
 
 func ClaudeData(c *gin.Context, resp dto.ClaudeResponse) error {
@@ -65,19 +66,19 @@ func ResponseChunkData(c *gin.Context, resp dto.ResponsesStreamResponse, data st
 }
 
 func StringData(c *gin.Context, str string) error {
-	//str = strings.TrimPrefix(str, "data: ")
-	//str = strings.TrimSuffix(str, "\r")
+	// 去除可能存在的 SSE 前缀和尾部换行
+	str = strings.TrimPrefix(str, "data: ")
+	str = strings.TrimRight(str, "\r\n")
 
-	// Format with proper SSE format - data: DATA\n\n (double newline at end)
-	sseData := fmt.Sprintf("data: %s\n\n", str)
+	// 不再自己追加换行，交给 CustomEvent 在内部统一输出 \n\n 分隔
+	sseData := fmt.Sprintf("data: %s", str)
 	c.Render(-1, common.CustomEvent{Data: sseData})
 
 	if flusher, ok := c.Writer.(http.Flusher); ok {
 		flusher.Flush()
-	} else {
-		return errors.New("streaming error: flusher not found")
+		return nil
 	}
-	return nil
+	return errors.New("streaming error: flusher not found")
 }
 
 func PingData(c *gin.Context) error {

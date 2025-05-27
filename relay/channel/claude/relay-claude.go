@@ -492,11 +492,6 @@ func FormatClaudeResponseInfo(requestMode int, claudeResponse *dto.ClaudeRespons
 }
 
 func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claudeInfo *ClaudeResponseInfo, data string, requestMode int) *dto.OpenAIErrorWithStatusCode {
-	// Skip empty data which can cause empty JSON responses
-	if len(data) == 0 || strings.TrimSpace(data) == "" {
-		return nil
-	}
-
 	var claudeResponse dto.ClaudeResponse
 	err := common.DecodeJsonStr(data, &claudeResponse)
 	if err != nil {
@@ -538,9 +533,11 @@ func HandleStreamResponseData(c *gin.Context, info *relaycommon.RelayInfo, claud
 		helper.ClaudeChunkData(c, claudeResponse, data)
 	} else if info.RelayFormat == relaycommon.RelayFormatOpenAI {
 		response := StreamResponseClaude2OpenAI(requestMode, &claudeResponse)
+
 		if !FormatClaudeResponseInfo(requestMode, &claudeResponse, response, claudeInfo) {
 			return nil
 		}
+
 		err = helper.ObjectData(c, response)
 		if err != nil {
 			common.LogError(c, "send_stream_response_failed: "+err.Error())
@@ -603,65 +600,9 @@ func ClaudeStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.
 	if err != nil {
 		return err, nil
 	}
+
 	HandleStreamFinalResponse(c, info, claudeInfo, requestMode)
 	return nil, claudeInfo.Usage
-}
-
-func ClaudeOriginStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
-	var usage *dto.Usage
-	usage = &dto.Usage{}
-	//errChan := make(chan error, 2)
-	//sumUsage := &dto.RealtimeUsage{}
-	var accumulatedText string
-	usage.PromptTokens = info.PromptTokens
-	helper.StreamScannerHandler(c, resp, info, func(data string) bool {
-		// 原有的响应处理逻辑...
-		var claudeResponse dto.ClaudeResponse
-		err := json.Unmarshal([]byte(data), &claudeResponse)
-		if err != nil {
-			common.SysError("error unmarshalling stream response: " + err.Error())
-			return true
-		}
-
-		// 如果从响应中获取到了官方的 PromptTokens，则覆盖我们的估算值
-		if claudeResponse.Type == "message_start" {
-			info.UpstreamModelName = claudeResponse.Message.Model
-			if claudeResponse.Message.Usage != nil {
-				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
-				usage.PromptTokensDetails.CachedCreationTokens = claudeResponse.Message.Usage.CacheCreationInputTokens
-				usage.PromptTokensDetails.CachedTokens = claudeResponse.Message.Usage.CacheReadInputTokens
-			}
-		} else if claudeResponse.Type == "message_delta" {
-			if claudeResponse.Usage != nil {
-				usage.CompletionTokens = claudeResponse.Usage.OutputTokens
-				usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
-			}
-		} else if claudeResponse.Type == "content_block_delta" {
-			if claudeResponse.Delta != nil && claudeResponse.Delta.Text != nil {
-				accumulatedText += *claudeResponse.Delta.Text
-			}
-		}
-
-		// SSE 响应发送逻辑...
-		sseEvent := claudeResponse.Type
-		sseMessage := fmt.Sprintf("event: %s\ndata: %s\n\n", sseEvent, data)
-		_, err = c.Writer.Write([]byte(sseMessage))
-		if err != nil {
-			common.LogError(c, "send_stream_response_failed: "+err.Error())
-			return false
-		}
-		c.Writer.Flush()
-
-		return true
-	})
-
-	// 在流式处理结束后，如果仍然没有获得 CompletionTokens，则使用累积文本估算
-	if usage.CompletionTokens == 0 && accumulatedText != "" {
-		usage.CompletionTokens = helper.EstimateTokenCount(accumulatedText)
-		usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
-	}
-
-	return nil, usage
 }
 
 func HandleClaudeResponseData(c *gin.Context, info *relaycommon.RelayInfo, claudeInfo *ClaudeResponseInfo, data []byte, requestMode int) *dto.OpenAIErrorWithStatusCode {

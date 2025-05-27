@@ -96,7 +96,7 @@ func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, request
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *dto.OpenAIErrorWithStatusCode) {
 	if info.IsStream {
-		err, usage = ClaudeOriginStreamHandler(c, resp, info)
+		err, usage = ClaudeStreamHandler(c, resp, info, a.RequestMode)
 	} else {
 		err, usage = ClaudeHandler(c, resp, a.RequestMode, info)
 	}
